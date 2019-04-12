@@ -1,0 +1,59 @@
+//Kayaking summary email.
+// Simple function to send Weekly Status Sheets to contacts listed on the "Contacts" sheet in the MPD.
+
+// Load a menu item called "Project Admin" with a submenu item called "Send Status"
+// Running this, sends the currently open sheet, as a PDF attachment
+function onOpen() {
+  var submenu = [{name:"Send PDF", functionName:"creatPDF"}];
+  SpreadsheetApp.getActiveSpreadsheet().addMenu('Project Admin', submenu);  
+}
+
+
+
+  //Code to be execute
+
+function creatPDF(parameters) {
+  
+  
+  SpreadsheetApp.flush();
+  var day = new Date();
+    if (day.getDay()>5 || day.getDay()==0) {
+      return;
+    }
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var period = Utilities.formatDate(new Date(), "GMT+5", "yyyy.MM.dd");
+  var url = ss.getUrl();
+
+  //remove the trailing 'edit' from the url
+  url = url.replace(/edit$/, '');
+
+  //additional parameters for exporting the sheet as a pdf
+  var url_ext = 'export?exportFormat=pdf&format=pdf' + //export as pdf
+    //below parameters are optional...
+    '&size=letter' + //paper size
+    '&portrait=false' + //orientation, false for landscape
+    '&fitw=true' + //fit to width, false for actual size
+    '&sheetnames=false&printtitle=false&pagenumbers=false' + //hide optional headers and footers
+    '&gridlines=false' + //hide gridlines
+    '&fzr=false' + //do not repeat row headers (frozen rows) on each page
+    '&gid=' + sheet.getSheetId(); //the sheet's Id
+
+  var token = ScriptApp.getOAuthToken();
+
+  var response = UrlFetchApp.fetch(url + url_ext, {
+    headers: {
+      'Authorization': 'Bearer ' + token
+    }
+  });
+
+  var blob = response.getBlob().setName(ss.getName() + " " + period + '.pdf');
+
+  //from here you should be able to use and manipulate the blob to send and email or create a file per usual.
+  //In this example, I save the pdf to drive
+    var email = "luke@apparatusteam.com";
+    var subject = "Company Form Audit Doc: " + period ;
+    var body ="Good Morning Team! \r\n          Please see attached report";
+
+    MailApp.sendEmail('luke@apparatusteam.com', subject, body, {attachments:[blob]});
+
